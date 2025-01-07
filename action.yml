@@ -8,6 +8,9 @@ inputs:
   repo:
     description: The target repository (owner/repo)
     required: true
+  branch:
+    description: The branch to which changes will be pushed
+    required: true
 runs:
   using: "composite"
   steps:
@@ -16,3 +19,4 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
         REPO: ${{ inputs.repo }}
+        BRANCH: ${{ inputs.branch }}

@@ -1,9 +1,5 @@
 #!/bin/bash
 set -e
-echo "Current working directory:"
-pwd
-echo "Listing files:"
-ls -la
 
 OUTPUT_FILE="Wiki-Files/Current-Workflows.md"
 REPO_DIR=$(mktemp -d)
@@ -32,4 +28,6 @@ git config user.email "github-actions[bot]@users.noreply.github.com"
 git config user.name "github-actions[bot]"
 git add "$OUTPUT_FILE"
 git commit -m "Update Current-Workflows.md with latest workflow information" || echo "No changes to commit"
-git push origin main || echo "No changes to push"
+
+echo "Pushing changes to branch $BRANCH..."
+git push origin HEAD:"$BRANCH" || echo "No changes to push"
