@@ -1,5 +1,8 @@
 #!/bin/bash
 set -e
+echo "Running entrypoint.sh"
+pwd
+ls -la
 
 OUTPUT_FILE="Wiki-Files/Current-Workflows.md"
 REPO_DIR=$(mktemp -d)
