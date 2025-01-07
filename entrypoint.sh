@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e
-echo "Running entrypoint.sh"
+echo "Current working directory:"
 pwd
+echo "Listing files:"
 ls -la
 
 OUTPUT_FILE="Wiki-Files/Current-Workflows.md"
