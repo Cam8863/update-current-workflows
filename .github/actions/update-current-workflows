@@ -1,0 +1,84 @@
+name: "Update Current Workflows"
+description: "Custom action to update Current-Workflows.md and handle branch protection rules"
+
+inputs:
+  GH_TOKEN:
+    description: "GitHub token for authentication"
+    required: true
+  BASE_BRANCH:
+    description: "Base branch for the pull request"
+    required: true
+  WORKFLOWS_DIR:
+    description: "Directory containing workflow files"
+    required: true
+    default: "Workflows"
+  OUTPUT_FILE:
+    description: "Output file for the workflows list"
+    required: true
+    default: "Wiki-Files/Current-Workflows.md"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Generate Current-Workflows list
+      run: |
+        echo "Generating Current-Workflows list..."
+        echo -e "# Current-Workflows\n" > "${{ inputs.OUTPUT_FILE }}"
+
+        find "${{ inputs.WORKFLOWS_DIR }}"/* -type f -name "README.md" | while read README_FILE; do
+          NAME=$(grep '^# ' "$README_FILE" | head -n 1 | sed 's/^# //')
+          DESCRIPTION=$(awk '
+            BEGIN {flag=0}
+            /^## / {flag=1; next}
+            /^#/ {flag=0}
+            flag && !/^$/ {print; exit}
+          ' "$README_FILE")
+
+          if [ -n "$NAME" ] && [ -n "$DESCRIPTION" ]; then
+            echo -e "- **$NAME**: $DESCRIPTION" >> "${{ inputs.OUTPUT_FILE }}"
+          fi
+        done
+
+        if [ -s "${{ inputs.OUTPUT_FILE }}" ]; then
+          echo "UPDATED_WORKFLOWS=true" >> $GITHUB_ENV
+        else
+          echo "UPDATED_WORKFLOWS=false" >> $GITHUB_ENV
+        fi
+      shell: bash
+
+    - name: Commit and Push Changes
+      if: ${{ env.UPDATED_WORKFLOWS == 'true' }}
+      run: |
+        echo "Committing and pushing changes..."
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git config --global user.name "github-actions[bot]"
+
+        BRANCH_NAME="update-workflow-list-$(date +%s)"
+        git checkout -b "$BRANCH_NAME"
+        git add "${{ inputs.OUTPUT_FILE }}"
+
+        if git diff --cached --quiet; then
+          echo "No changes to commit."
+          exit 0
+        fi
+
+        git commit -m "Update Current-Workflows.md with latest workflow information"
+        git push "https://x-access-token:${{ inputs.GH_TOKEN }}@github.com/${{ github.repository }}" HEAD:"$BRANCH_NAME"
+
+        echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Create Pull Request
+      run: |
+        echo "Creating pull request..."
+        BRANCH_NAME="${{ env.BRANCH_NAME }}"
+        PR_URL=$(gh pr create \
+          --title "Update Current Workflows" \
+          --body "This PR updates the Current-Workflows page with the latest workflow information." \
+          --base "${{ inputs.BASE_BRANCH }}" \
+          --head "$BRANCH_NAME" \
+          --label "Auto-Update")
+        echo "Pull Request URL: $PR_URL"
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.GH_TOKEN }}
